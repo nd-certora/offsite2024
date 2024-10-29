@@ -29,8 +29,30 @@ contract Multisig is State {
         require(guard == 1);
         _;
     }
+
+    function fibonacci(uint256 n) private pure returns (uint256) {    
+        if (n == 0) return 0;
+        if (n == 1) return 1;
+
+        uint256 a = 0;
+        uint256 b = 1;
+        uint256 result;
+
+        for (uint256 i = 2; i <= n; i++) {
+            result = a + b;
+            a = b;
+            b = result;
+        }
+
+        return result;
+    }
+
+
     constructor(address[] memory newValidators,  uint256 _quorum, uint256 _step)
     {
+        require (_quorum != 0);
+        require (fibonacci(_step) == _quorum);
+        
         quorum = _quorum;
         step = _step;
         
@@ -64,12 +86,13 @@ contract Multisig is State {
         isValidator[validator] = true ;
 
         // update quorum
+        require (newQuorum <= validators.length) ;
         quorum = newQuorum ;
         
         // update step
+        require (fibonacci(_step) == newQuorum);
         step = _step ;
         
-        // TODO quorum has to be fibonacci of step (quorumIsValid)
     }
 
 
@@ -98,9 +121,11 @@ contract Multisig is State {
         validatorsReverseMap[validator] = 0;
 
         // update quorum
+        require (newQuorum <= validators.length) ;
         quorum = newQuorum ;
         
         // update step
+        require (fibonacci(_step) == newQuorum);
         step = _step ;
         
         // update confirmations mapping
@@ -109,7 +134,6 @@ contract Multisig is State {
             confirmations[txnId][validator] = false;
         }
 
-        // TODO quorum has to be fibonacci of step (quorumIsValid)
     }
 
 
@@ -154,7 +178,14 @@ contract Multisig is State {
         // check that sender is contract 
         assert (msg.sender == address(this));
 
-        
+        // quorum must be <= validators.length
+        require (_quorum <= validators.length) ;
+
+        // ensure step is correct
+        require (fibonacci(_step) == _quorum);
+
+        quorum = _quorum ;
+        step = _step ;
 
     }
 
@@ -163,14 +194,6 @@ contract Multisig is State {
         view
         returns (bool)
     {
-        uint256 idx = transactionIdsReverseMap[transactionId];
-        
-        return (
-            idx > 0
-            && transactionIds.length > idx 
-            && transactionIds[idx] == transactionId
-            && transactions[transactionId].destination != address(0) // transaction is initialized
-        );
     }
 
     function voteForTransaction(
@@ -183,41 +206,37 @@ contract Multisig is State {
         require (isValidator[msg.sender], "sender is not a validator for this transaction");
         require (transactionId != 0, "0 is never a valid as a transactionId");
 
-        if (!transactionExists(transactionId)) {
-            addTransaction(transactionId, destination, value, data, hasReward);
-        }
-        Transaction memory transaction = transactions[transactionId];
+        if (!isValidTransaction(transactionId)) {
+            Transaction memory newTransaction = Transaction({
+                destination:destination,
+                value:value,
+                data:data,
+                executed:false,
+                hasReward:hasReward,
+                validatorVotePeriod:ADD_VALIDATOR_VOTE_PERIOD
+            });
+            
+            transactions[transactionId] = newTransaction;
 
-        // don't actually need to check this if we inserted a new transaction,
-        // since `ADD_VALIDATOR_VOTE_PERIOD > 0`
-        require (block.timestamp <= transaction.validatorVotePeriod, "vote period has passed");
+            uint256 insertionIdx = transactionIds.length;
+            transactionIds.push(transactionId);
+            transactionIdsReverseMap[transactionId] = insertionIdx;
+        }
 
         bool confirmation = confirmations[transactionId][msg.sender];
         require (!confirmation, "validator already voted");
         confirmations[transactionId][msg.sender] = true;
     }
 
-    function addTransaction(
-        bytes32 transactionId,
-        address destination,
-        uint256 value,
-        bytes calldata data,
-        bool hasReward
-    ) private {
-        Transaction memory newTransaction = Transaction({
-            destination:destination,
-            value:value,
-            data:data,
-            executed:false,
-            hasReward:hasReward,
-            validatorVotePeriod:(block.timestamp + ADD_VALIDATOR_VOTE_PERIOD)
-        });
-            
-        transactions[transactionId] = newTransaction;
-
-        uint256 insertionIdx = transactionIds.length;
-        transactionIds.push(transactionId);
-        transactionIdsReverseMap[transactionId] = insertionIdx;
+    function isValidTransaction(bytes32 transactionId) public view returns (bool) {
+        uint256 idx = transactionIdsReverseMap[transactionId];
+        
+        return (
+            idx > 0
+            && transactionIds.length > idx 
+            && transactionIds[idx] == transactionId
+            && transactions[transactionId].destination != address(0) // transaction is initialized
+        );
     }
 
 
@@ -229,11 +248,7 @@ contract Multisig is State {
         // lengthChangeWorks3
         // has to have at least one example 
         // check valid transaction
-        require(transactionExists(transactionId) && transactionId != 0 , "transaction not valid" );
-        // check not executed before
-        require(!transactions[transactionId].executed);
-        // check reward 
-        require(!transactions[transactionId].hasReward || transactions[transactionId].value >= WRAPPING_FEE );
+        require( isValidTransaction(transactionId) && transactionId!= 0 , "transaction not valid" );
         // check quorum
         require(isConfirmed(transactionId), "quorum not reached");
         // call destination
@@ -248,8 +263,10 @@ contract Multisig is State {
         require(success, "transaction execution failed");
         // mark as executed
         transactions[transactionId].executed;
-        //update rewardsPot
-        rewardsPot = rewardsPot + transactions[transactionId].value ;
+        
+
+
+        //maybe something on the reward 
     }
 
 
@@ -257,14 +274,13 @@ contract Multisig is State {
     function removeTransaction(bytes32 transactionId) public {
         require(msg.sender == address(this));
         require(!isConfirmed(transactionId));
-        require(transactionExists(transactionId) && transactionId != 0 );
+        require(isValidTransaction(transactionId) && transactionId!= 0 );
 
-        //remove from mappings - override with the last one 
-        uint256 toRemove = transactionIdsReverseMap[transactionId];
-        bytes32 last = transactionIds[transactionIds.length-1]; 
-        transactionIds[toRemove] = last;
-        transactionIdsReverseMap[last] = toRemove;
-        transactionIds.pop();
+        //remove from mappings
+        transactionIds[transactionIdsReverseMap[transactionId]] = 0;
+        transactionIdsReverseMap[transactionId] = 0;
+
+
     }
 
     function isConfirmed(bytes32 transactionId) public view returns (bool) {
