@@ -185,10 +185,6 @@ contract Multisig is State {
         );
     }
 
-    function isValidTransation(bytes32 transactionId) view public returns (bool) {
-        //dummy
-        return true; 
-    }
 
     function executeTransaction(bytes32 transactionId) public
     {
@@ -198,7 +194,7 @@ contract Multisig is State {
         // lengthChangeWorks3
         // has to have at least one example 
         // check valid transaction
-        require( isValidTransation(transactionId) && transactionId!= 0 , "transaction not valid" );
+        require( isValidTransaction(transactionId) && transactionId!= 0 , "transaction not valid" );
         // check quorum
         require(isConfirmed(transactionId), "quorum not reached");
         // call destination
@@ -213,6 +209,9 @@ contract Multisig is State {
         require(success, "transaction execution failed");
         // mark as executed
         transactions[transactionId].executed;
+        
+
+
         //maybe something on the reward 
     }
 
@@ -221,7 +220,7 @@ contract Multisig is State {
     function removeTransaction(bytes32 transactionId) public {
         require(msg.sender == address(this));
         require(!isConfirmed(transactionId));
-        require(isValidTransation(transactionId) && transactionId!= 0 );
+        require(isValidTransaction(transactionId) && transactionId!= 0 );
 
         //remove from mappings
         transactionIds[transactionIdsReverseMap[transactionId]] = 0;
