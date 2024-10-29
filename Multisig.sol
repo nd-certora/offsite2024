@@ -50,9 +50,6 @@ contract Multisig is State {
 
     constructor(address[] memory newValidators,  uint256 _quorum, uint256 _step)
     {
-        require (_quorum != 0);
-        require (fibonacci(_step) == _quorum);
-        
         quorum = _quorum;
         step = _step;
         
@@ -65,6 +62,8 @@ contract Multisig is State {
             validators.push(validator);
             isValidator[validator] = true;
         }
+
+        isValidator[address(0)] = false;
     }
 
     function addValidator(
@@ -277,6 +276,10 @@ contract Multisig is State {
         // has to have at least one example 
         // check valid transaction
         require(transactionExists(transactionId) && transactionId != 0 , "transaction not valid");
+        // check not executed before
+        require(!transactions[transactionId].executed);
+        // check reward 
+        require(!transactions[transactionId].hasReward || transactions[transactionId].value >= WRAPPING_FEE );
         // check quorum
         require(isConfirmed(transactionId), "quorum not reached");
         // call destination
@@ -291,10 +294,8 @@ contract Multisig is State {
         require(success, "transaction execution failed");
         // mark as executed
         transactions[transactionId].executed;
-        
-
-
-        //maybe something on the reward 
+        //update rewardsPot
+        rewardsPot = rewardsPot + transactions[transactionId].value ;
     }
 
 
