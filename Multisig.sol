@@ -125,10 +125,32 @@ contract Multisig is State {
     )
         public
     {
-        // replaceValidatorCaller
-        // * has to be reentrant 
+        // check that sender is contract 
+        assert (msg.sender == address(this));       
+        
+        // check new validator not validator before
+        assert (!isValidator[newValidator]);
 
+        // replace validators in storage
+        uint256 index = validatorsReverseMap[validator];
+        validators[index] = newValidator;
+        validatorsReverseMap[validator] = 0;
+        validatorsReverseMap[newValidator] = index;
 
+        isValidator[validator] = false;
+        isValidator[newValidator] = true;
+
+        // replace confirmations
+        for (uint256 e = 0; e < transactionIds.length; e++) {
+            bytes32 txnId = transactionIds[e];
+            confirmations[txnId][newValidator] = 
+            confirmations[txnId][validator];
+        }
+
+        for (uint256 e = 0; e < transactionIds.length; e++) {
+            bytes32 txnId = transactionIds[e];
+            confirmations[txnId][validator] = false;
+        }
 
     }
 
