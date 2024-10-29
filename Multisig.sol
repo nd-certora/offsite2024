@@ -42,7 +42,12 @@ contract Multisig is State {
         assert (validators.length < type(uint256).max ) ;
 
         // check that sender is contract 
-        assert (msg.sender == address(this)) ; 
+        assert (msg.sender == address(this)) ;
+
+        // check validator is not already a validator
+        for (uint i = 0; i < validators.length; i++) {
+            require (validators[i] != validator);
+        }
 
         // append validator to validators list
         validators.push(validator) ;
@@ -63,6 +68,9 @@ contract Multisig is State {
         uint256 newQuorum,
         uint256 _step
     ) public {
+
+        
+
     }
 
 
