@@ -109,6 +109,12 @@ contract Multisig is State {
         // update step
         step = _step ;
         
+        // update confirmations mapping
+        for (uint256 e = 0; e < transactionIds.length; e++) {
+            bytes32 txnId = transactionIds[e];
+            confirmations[txnId][validator] = false;
+        }
+
         // TODO quorum has to be fibonacci of step (quorumIsValid)
     }
 
