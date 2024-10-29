@@ -49,6 +49,9 @@ contract Multisig is State {
             require (validators[i] != validator);
         }
 
+        // Update reverse map: the new validator is in the last index.
+        validatorsReverseMap[validator] = validators.length;
+
         // append validator to validators list
         validators.push(validator) ;
         isValidator[validator] = true ;
