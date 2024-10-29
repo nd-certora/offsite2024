@@ -60,7 +60,10 @@ contract Multisig is State {
         validators.push(address(0));
 
         for (uint256 idx = 0; idx < newValidators.length; idx += 1) {
-            validators.push(newValidators[idx]);
+            address validator = newValidators[idx];
+            validatorsReverseMap[validator] = validators.length;
+            validators.push(validator);
+            isValidator[validator] = true;
         }
     }
 
@@ -200,6 +203,14 @@ contract Multisig is State {
         view
         returns (bool)
     {
+        uint256 idx = transactionIdsReverseMap[transactionId];
+        
+        return (
+            idx > 0
+            && transactionIds.length > idx 
+            && transactionIds[idx] == transactionId
+            && transactions[transactionId].destination != address(0) // transaction is initialized
+        );
     }
 
     function voteForTransaction(
@@ -212,37 +223,48 @@ contract Multisig is State {
         require (isValidator[msg.sender], "sender is not a validator for this transaction");
         require (transactionId != 0, "0 is never a valid as a transactionId");
 
-        if (!isValidTransaction(transactionId)) {
-            Transaction memory newTransaction = Transaction({
-                destination:destination,
-                value:value,
-                data:data,
-                executed:false,
-                hasReward:hasReward,
-                validatorVotePeriod:ADD_VALIDATOR_VOTE_PERIOD
-            });
-            
-            transactions[transactionId] = newTransaction;
-
-            uint256 insertionIdx = transactionIds.length;
-            transactionIds.push(transactionId);
-            transactionIdsReverseMap[transactionId] = insertionIdx;
+        if (!transactionExists(transactionId)) {
+            addTransaction(transactionId, destination, value, data, hasReward);
         }
+        Transaction memory transaction = transactions[transactionId];
+    
+        // don't actually need to check this if we inserted a new transaction,
+        // since `ADD_VALIDATOR_VOTE_PERIOD > 0`
+        require (block.timestamp <= transaction.validatorVotePeriod, "vote period has passed");
 
         bool confirmation = confirmations[transactionId][msg.sender];
         require (!confirmation, "validator already voted");
         confirmations[transactionId][msg.sender] = true;
+
+        if (isConfirmed(transactionId)) {
+            executeTransaction(transactionId);
+        }
     }
 
-    function isValidTransaction(bytes32 transactionId) public view returns (bool) {
-        uint256 idx = transactionIdsReverseMap[transactionId];
-        
-        return (
-            idx > 0
-            && transactionIds.length > idx 
-            && transactionIds[idx] == transactionId
-            && transactions[transactionId].destination != address(0) // transaction is initialized
-        );
+    function addTransaction(
+        bytes32 transactionId,
+        address destination,
+        uint256 value,
+        bytes calldata data,
+        bool hasReward
+    ) private {
+        require (destination != address(0), "destination can't be 0");
+        require (!hasReward || value >= WRAPPING_FEE, "transaction has reward, but value is too low");
+
+        Transaction memory newTransaction = Transaction({
+            destination:destination,
+            value:value,
+            data:data,
+            executed:false,
+            hasReward:hasReward,
+            validatorVotePeriod:(block.timestamp + ADD_VALIDATOR_VOTE_PERIOD)
+        });
+            
+        transactions[transactionId] = newTransaction;
+
+        uint256 insertionIdx = transactionIds.length;
+        transactionIds.push(transactionId);
+        transactionIdsReverseMap[transactionId] = insertionIdx;
     }
 
 
@@ -254,7 +276,7 @@ contract Multisig is State {
         // lengthChangeWorks3
         // has to have at least one example 
         // check valid transaction
-        require( isValidTransaction(transactionId) && transactionId!= 0 , "transaction not valid" );
+        require(transactionExists(transactionId) && transactionId != 0 , "transaction not valid");
         // check quorum
         require(isConfirmed(transactionId), "quorum not reached");
         // call destination
@@ -278,9 +300,9 @@ contract Multisig is State {
 
 
     function removeTransaction(bytes32 transactionId) public {
+        require(transactionExists(transactionId) && transactionId != 0);
         require(msg.sender == address(this));
         require(!isConfirmed(transactionId));
-        require(isValidTransaction(transactionId) && transactionId!= 0 );
 
         //remove from mappings
         transactionIds[transactionIdsReverseMap[transactionId]] = 0;
