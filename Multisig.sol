@@ -69,6 +69,8 @@ contract Multisig is State {
         uint256 newQuorum,
         uint256 _step
     ) public   {
+        require (validator != address(0), "Address cannot be the zero address");
+
         // make sure validator list isn't maxed out
         assert (validators.length < type(uint256).max ) ;
 
