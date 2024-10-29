@@ -305,11 +305,6 @@ contract Multisig is State {
         require(msg.sender == address(this));
         require(!isConfirmed(transactionId));
 
-        //remove from mappings
-        transactionIds[transactionIdsReverseMap[transactionId]] = 0;
-        transactionIdsReverseMap[transactionId] = 0;
-
-
 
         //set to zero everything
         delete transactions[transactionId] ;
