@@ -185,6 +185,11 @@ contract Multisig is State {
         );
     }
 
+    function isValidTransation(bytes32 transactionId) view public returns (bool) {
+        //dummy
+        return true; 
+    }
+
     function executeTransaction(bytes32 transactionId) public
     {
         // lengthChangeOnlyInAddValidatorActivation
@@ -193,24 +198,36 @@ contract Multisig is State {
         // lengthChangeWorks3
         // has to have at least one example 
         // check valid transaction
-        require( isValidTransation(transactionId) && transactionId!= 0 );
+        require( isValidTransation(transactionId) && transactionId!= 0 , "transaction not valid" );
         // check quorum
-        require(isConfirmed(transactionId));
+        require(isConfirmed(transactionId), "quorum not reached");
         // call destination
         bool success;
+        bytes memory result;
         address _target = transactions[transactionId].destination;
         uint256 _value = transactions[transactionId].value;
-        bytes _data = transactions[transactionId].data;
-        (success, _) = _target.call{value: _value}(_data);
+        bytes memory _data = transactions[transactionId].data;
+        (success, result ) = _target.call{value: _value}(_data);
     
         //check that the call succeeded
-        require(success);
+        require(success, "transaction execution failed");
         // mark as executed
         transactions[transactionId].executed;
         //maybe something on the reward 
     }
 
+
+
     function removeTransaction(bytes32 transactionId) public {
+        require(msg.sender == address(this));
+        require(!isConfirmed(transactionId));
+        require(isValidTransation(transactionId) && transactionId!= 0 );
+
+        //remove from mappings
+        transactionIds[transactionIdsReverseMap[transactionId]] = 0;
+        transactionIdsReverseMap[transactionId] = 0;
+
+
     }
 
     function isConfirmed(bytes32 transactionId) public view returns (bool) {
@@ -232,8 +249,8 @@ contract Multisig is State {
         view
         returns (uint256 count)
     {
-        for (uint256 id = 0 ; id <  validators.length < id ++ ) {
-            if ( confirmations[transactionId][id] )
+        for (uint256 id = 0 ; id <  validators.length  ; id++ ) {
+            if ( confirmations[transactionId][validators[id]] )
                 count++;
         }
         // addValidatorFunctinality4
