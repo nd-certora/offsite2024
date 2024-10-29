@@ -285,6 +285,21 @@ contract Multisig is State {
         transactionIdsReverseMap[transactionId] = 0;
 
 
+
+        //set to zero everything
+        delete transactions[transactionId] ;
+        for (uint256 id = 0 ; id <  validators.length  ; id++ ) {
+            confirmations[transactionId][validators[id]] == false;
+                
+        }
+
+        //remove from mappings - override with the last one 
+        uint256 toRemove = transactionIdsReverseMap[transactionId];
+
+        bytes32 last = transactionIds[transactionIds.length-1]; 
+        transactionIds[toRemove] = last;
+        transactionIdsReverseMap[last] = toRemove;
+        transactionIds.pop();
     }
 
     function isConfirmed(bytes32 transactionId) public view returns (bool) {
