@@ -58,9 +58,13 @@ contract Multisig is State {
 
         for (uint256 idx = 0; idx < newValidators.length; idx += 1) {
             address validator = newValidators[idx];
+            if (idx != 0) {require (validator != address(0));}
+            require(validator != address(this));
             validatorsReverseMap[validator] = validators.length;
             validators.push(validator);
-            isValidator[validator] = true;
+            require(!isValidator[validator]);
+            if (idx != 0) {require (validator != validators[0]);}
+            if (idx != 0) {isValidator[validator] = true;}
         }
 
         isValidator[address(0)] = false;
