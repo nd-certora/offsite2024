@@ -188,10 +188,10 @@ contract Multisig is State {
         require (isValidator[msg.sender], "sender is not a validator for this transaction");
         require (transactionId != 0, "0 is never a valid as a transactionId");
 
-        if (!isValidTransaction(transactionId)) {
+        if (!transactionExists(transactionId)) {
             addTransaction(transactionId, destination, value, data, hasReward);
         }
-        Transaction memory transaction = (transactionExists(transactionId);
+        Transaction memory transaction = transactions[transactionId];
 
         // don't actually need to check this if we inserted a new transaction,
         // since `ADD_VALIDATOR_VOTE_PERIOD > 0`
