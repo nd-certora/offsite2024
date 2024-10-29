@@ -168,6 +168,14 @@ contract Multisig is State {
         view
         returns (bool)
     {
+        uint256 idx = transactionIdsReverseMap[transactionId];
+        
+        return (
+            idx > 0
+            && transactionIds.length > idx 
+            && transactionIds[idx] == transactionId
+            && transactions[transactionId].destination != address(0) // transaction is initialized
+        );
     }
 
     function voteForTransaction(
@@ -181,36 +189,40 @@ contract Multisig is State {
         require (transactionId != 0, "0 is never a valid as a transactionId");
 
         if (!isValidTransaction(transactionId)) {
-            Transaction memory newTransaction = Transaction({
-                destination:destination,
-                value:value,
-                data:data,
-                executed:false,
-                hasReward:hasReward,
-                validatorVotePeriod:ADD_VALIDATOR_VOTE_PERIOD
-            });
-            
-            transactions[transactionId] = newTransaction;
-
-            uint256 insertionIdx = transactionIds.length;
-            transactionIds.push(transactionId);
-            transactionIdsReverseMap[transactionId] = insertionIdx;
+            addTransaction(transactionId, destination, value, data, hasReward);
         }
+        Transaction memory transaction = (transactionExists(transactionId);
+
+        // don't actually need to check this if we inserted a new transaction,
+        // since `ADD_VALIDATOR_VOTE_PERIOD > 0`
+        require (block.timestamp <= transaction.validatorVotePeriod, "vote period has passed");
 
         bool confirmation = confirmations[transactionId][msg.sender];
         require (!confirmation, "validator already voted");
         confirmations[transactionId][msg.sender] = true;
     }
 
-    function isValidTransaction(bytes32 transactionId) public view returns (bool) {
-        uint256 idx = transactionIdsReverseMap[transactionId];
-        
-        return (
-            idx > 0
-            && transactionIds.length > idx 
-            && transactionIds[idx] == transactionId
-            && transactions[transactionId].destination != address(0) // transaction is initialized
-        );
+    function addTransaction(
+        bytes32 transactionId,
+        address destination,
+        uint256 value,
+        bytes calldata data,
+        bool hasReward
+    ) private {
+        Transaction memory newTransaction = Transaction({
+            destination:destination,
+            value:value,
+            data:data,
+            executed:false,
+            hasReward:hasReward,
+            validatorVotePeriod:(block.timestamp + ADD_VALIDATOR_VOTE_PERIOD)
+        });
+            
+        transactions[transactionId] = newTransaction;
+
+        uint256 insertionIdx = transactionIds.length;
+        transactionIds.push(transactionId);
+        transactionIdsReverseMap[transactionId] = insertionIdx;
     }
 
 

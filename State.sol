@@ -8,7 +8,7 @@ abstract contract State {
         bytes data;
         bool executed;
         bool hasReward;
-        uint256 validatorVotePeriod;
+        uint256 validatorVotePeriod; // last timestamp where votes can still be submitted
     }
 
     /// @dev Current set of validators, i.e. addresses that control the
