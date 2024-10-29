@@ -708,6 +708,14 @@ invariant quorumIsValid(env e)
     }
 }
 
+invariant emptyArraysHaveDummyValue(env e) 
+    currentContract.validators.length > 0 && currentContract.transactionIds.length > 0 {
+    preserved
+    {
+        allInvariants(e);
+    }        
+}
+
 invariant VoteToChangeValidatorTransactionHasVotePeriod(env e, bytes32 transactionId)
     isVoteToChangeValidator(getDataOfTransaction(transactionId), currentContract.transactions[transactionId].destination) <=> currentContract.transactions[transactionId].validatorVotePeriod != 0
 {

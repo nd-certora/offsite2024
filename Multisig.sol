@@ -31,6 +31,19 @@ contract Multisig is State {
     }
     constructor(address[] memory newValidators,  uint256 _quorum, uint256 _step)
     {
+        // quorum = _quorum;
+        // step = _step;
+        
+        // uint256 dummyIdx = 0;
+
+        // transactionIds = new uint256[]();
+        // transactionIds.push(dummyIdx);
+
+        // transactions = new uint256[]();
+        // validators.push(dummyIdx);
+        // for (uint256 idx = 1; idx < newValidators.length; idx += 1) {
+        //     validators.push(newValidators[idx]);
+        // }
     }
 
     function addValidator(
@@ -136,16 +149,40 @@ contract Multisig is State {
         bytes calldata data,
         bool hasReward
     ) public payable {
-        // lengthChangeOnlyInAddValidatorActivation
-        // one of three methods that can increase length of execute transaction
+        require (isValidator[msg.sender], "sender is not a validator for this transaction");
+        require (transactionId != 0, "0 is never a valid as a transactionId");
 
-        // lengthChangeWorks2
-        // has to have at least one example 
+        if (!isValidTransaction(transactionId)) {
+            Transaction memory newTransaction = Transaction({
+                destination:destination,
+                value:value,
+                data:data,
+                executed:false,
+                hasReward:hasReward,
+                validatorVotePeriod:ADD_VALIDATOR_VOTE_PERIOD
+            });
+            
+            transactions[transactionId] = newTransaction;
 
-        // voteForTransactionCaller
-        // * can only be done by a validator 
+            uint256 insertionIdx = transactionIds.length;
+            transactionIds.push(transactionId);
+            transactionIdsReverseMap[transactionId] = insertionIdx;
+        }
 
-        // 
+        bool confirmation = confirmations[transactionId][msg.sender];
+        require (!confirmation, "validator already voted");
+        confirmations[transactionId][msg.sender] = true;
+    }
+
+    function isValidTransaction(bytes32 transactionId) public view returns (bool) {
+        uint256 idx = transactionIdsReverseMap[transactionId];
+        
+        return (
+            idx > 0
+            && transactionIds.length > idx 
+            && transactionIds[idx] == transactionId
+            && transactions[transactionId].destination != address(0) // transaction is initialized
+        );
     }
 
     function executeTransaction(bytes32 transactionId) public

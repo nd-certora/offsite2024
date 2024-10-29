@@ -13,7 +13,7 @@ abstract contract State {
 
     /// @dev Current set of validators, i.e. addresses that control the
     /// contract.
-    address[] public validators;
+    address[] public validators; // valid values at index 1..
     mapping(address => uint256) public validatorsReverseMap;
     
     /// @dev Mapping kept in sync with validator list for fast lookups.
@@ -26,7 +26,7 @@ abstract contract State {
 
     mapping(bytes32 => Transaction) public transactions;
     /// @dev List kept in sync to not lose information on mapping keys.
-    bytes32[] public transactionIds;
+    bytes32[] public transactionIds; // valid values at index 1..
     mapping(bytes32 => uint256) public transactionIdsReverseMap;
 
     /// @dev Mapping to keep track of validator votes for a transaction
