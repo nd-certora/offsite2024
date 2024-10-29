@@ -31,7 +31,7 @@ contract Multisig is State {
     }
     constructor(address[] memory newValidators,  uint256 _quorum, uint256 _step)
     {
-        // quorum = _quorum;
+        // quorum = _quorum && quorum != 0
         // step = _step;
         
         // uint256 dummyIdx = 0;
@@ -43,7 +43,7 @@ contract Multisig is State {
         // validators.push(dummyIdx);
         // for (uint256 idx = 1; idx < newValidators.length; idx += 1) {
         //     validators.push(newValidators[idx]);
-        // }
+        // }       
     }
 
     function addValidator(
@@ -58,9 +58,7 @@ contract Multisig is State {
         assert (msg.sender == address(this)) ;
 
         // check validator is not already a validator
-        for (uint i = 0; i < validators.length; i++) {
-            require (validators[i] != validator);
-        }
+        assert (!isValidator[validator]);
 
         // Update reverse map: the new validator is in the last index.
         validatorsReverseMap[validator] = validators.length;
@@ -157,10 +155,11 @@ contract Multisig is State {
     function changeQuorum(uint256 _quorum, uint256 _step)
         public
     {
-        // changeQuorumCaller
-        // * has to be a reentrant call 
+        // check that sender is contract 
+        assert (msg.sender == address(this));
 
-        // 
+        
+
     }
 
     function transactionExists(bytes32 transactionId)
