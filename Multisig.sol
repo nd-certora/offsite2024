@@ -71,9 +71,32 @@ contract Multisig is State {
         uint256 newQuorum,
         uint256 _step
     ) public {
+        // check that sender is contract 
+        assert (msg.sender == address(this)) ;       
 
+        // check size > 1
+        assert (validators.length > 1);
+
+        // make sure validator is in the map
+        assert (validatorsReverseMap[validator] != 0) ;
         
+        // remove validator from validators
+        uint256 index = validatorsReverseMap[validator];
+        validators[index] = validators[validators.length - 1];
+        validators.pop();
+        isValidator[validator] = false;
 
+        // reverse values map updating
+        validatorsReverseMap[validators[index]] = index;
+        validatorsReverseMap[validator] = 0;
+
+        // update quorum
+        quorum = newQuorum ;
+        
+        // update step
+        step = _step ;
+        
+        // TODO quorum has to be fibonacci of step (quorumIsValid)
     }
 
 
@@ -157,7 +180,11 @@ contract Multisig is State {
     {
 
         // addValidatorFunctinality4
-        // * count cannot change when adding a validaot
+        // * count cannot change when adding a validator
+
+        // removeValidatorFunctinality4, 5, 6
+        // * getConfirmationCount may stay the same or decrement when removing a validator
+        // * has to be one or the other
     }
 
     function distributeRewards() public reentracy
