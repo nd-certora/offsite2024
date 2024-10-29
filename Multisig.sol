@@ -192,6 +192,22 @@ contract Multisig is State {
 
         // lengthChangeWorks3
         // has to have at least one example 
+        // check valid transaction
+        require( isValidTransation(transactionId) && transactionId!= 0 );
+        // check quorum
+        require(isConfirmed(transactionId));
+        // call destination
+        bool success;
+        address _target = transactions[transactionId].destination;
+        uint256 _value = transactions[transactionId].value;
+        bytes _data = transactions[transactionId].data;
+        (success, _) = _target.call{value: _value}(_data);
+    
+        //check that the call succeeded
+        require(success);
+        // mark as executed
+        transactions[transactionId].executed;
+        //maybe something on the reward 
     }
 
     function removeTransaction(bytes32 transactionId) public {
@@ -199,6 +215,7 @@ contract Multisig is State {
 
     function isConfirmed(bytes32 transactionId) public view returns (bool) {
         // has enough votes for the quorum?
+        return getConfirmationCount(transactionId) >= quorum; 
     }
 
     function getDataOfTransaction(bytes32 id) external view returns (bytes memory data){
@@ -215,7 +232,10 @@ contract Multisig is State {
         view
         returns (uint256 count)
     {
-
+        for (uint256 id = 0 ; id <  validators.length < id ++ ) {
+            if ( confirmations[transactionId][id] )
+                count++;
+        }
         // addValidatorFunctinality4
         // * count cannot change when adding a validator
 
