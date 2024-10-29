@@ -145,6 +145,8 @@ contract Multisig is State {
     )
         public
     {
+        require (newValidator != address(0));
+
         // check that sender is contract 
         assert (msg.sender == address(this));       
         
