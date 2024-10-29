@@ -31,19 +31,15 @@ contract Multisig is State {
     }
     constructor(address[] memory newValidators,  uint256 _quorum, uint256 _step)
     {
-        // quorum = _quorum && quorum != 0
-        // step = _step;
+        quorum = _quorum;
+        step = _step;
         
-        // uint256 dummyIdx = 0;
+        transactionIds.push(0);
+        validators.push(address(0));
 
-        // transactionIds = new uint256[]();
-        // transactionIds.push(dummyIdx);
-
-        // transactions = new uint256[]();
-        // validators.push(dummyIdx);
-        // for (uint256 idx = 1; idx < newValidators.length; idx += 1) {
-        //     validators.push(newValidators[idx]);
-        // }       
+        for (uint256 idx = 0; idx < newValidators.length; idx += 1) {
+            validators.push(newValidators[idx]);
+        }
     }
 
     function addValidator(
