@@ -223,6 +223,10 @@ contract Multisig is State {
         // has to have at least one example 
         // check valid transaction
         require( isValidTransaction(transactionId) && transactionId!= 0 , "transaction not valid" );
+        // check not executed before
+        require(!transactions[transactionId].executed);
+        // check reward 
+        require(!transactions[transactionId].hasReward || transactions[transactionId].value >= WRAPPING_FEE );
         // check quorum
         require(isConfirmed(transactionId), "quorum not reached");
         // call destination
@@ -237,10 +241,8 @@ contract Multisig is State {
         require(success, "transaction execution failed");
         // mark as executed
         transactions[transactionId].executed;
-        
-
-
-        //maybe something on the reward 
+        //update rewardsPot
+        rewardsPot = rewardsPot + transactions[transactionId].value ;
     }
 
 
@@ -250,11 +252,12 @@ contract Multisig is State {
         require(!isConfirmed(transactionId));
         require(isValidTransaction(transactionId) && transactionId!= 0 );
 
-        //remove from mappings
-        transactionIds[transactionIdsReverseMap[transactionId]] = 0;
-        transactionIdsReverseMap[transactionId] = 0;
-
-
+        //remove from mappings - override with the last one 
+        uint256 toRemove = transactionIdsReverseMap[transactionId];
+        bytes32 last = transactionIds[transactionIds.length-1]; 
+        transactionIds[toRemove] = last;
+        transactionIdsReverseMap[last] = toRemove;
+        transactionIds.pop();
     }
 
     function isConfirmed(bytes32 transactionId) public view returns (bool) {
