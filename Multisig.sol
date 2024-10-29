@@ -234,7 +234,7 @@ contract Multisig is State {
         // lengthChangeWorks3
         // has to have at least one example 
         // check valid transaction
-        require( isValidTransaction(transactionId) && transactionId!= 0 , "transaction not valid" );
+        require(transactionExists(transactionId) && transactionId != 0 , "transaction not valid" );
         // check not executed before
         require(!transactions[transactionId].executed);
         // check reward 
@@ -262,7 +262,7 @@ contract Multisig is State {
     function removeTransaction(bytes32 transactionId) public {
         require(msg.sender == address(this));
         require(!isConfirmed(transactionId));
-        require(isValidTransaction(transactionId) && transactionId!= 0 );
+        require(transactionExists(transactionId) && transactionId != 0 );
 
         //remove from mappings - override with the last one 
         uint256 toRemove = transactionIdsReverseMap[transactionId];
