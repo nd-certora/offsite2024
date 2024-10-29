@@ -70,6 +70,7 @@ contract Multisig is State {
         uint256 _step
     ) public   {
         require (validator != address(0), "Address cannot be the zero address");
+        require (validator != address(this));
 
         // make sure validator list isn't maxed out
         assert (validators.length < type(uint256).max ) ;
@@ -146,6 +147,7 @@ contract Multisig is State {
         public
     {
         require (newValidator != address(0));
+        require (newValidator != address(this));
 
         // check that sender is contract 
         assert (msg.sender == address(this));       
